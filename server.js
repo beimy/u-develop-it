@@ -6,6 +6,8 @@ const app = express();
 const mysql = require('mysql2');
 // DOTENV IMPORTS
 require('dotenv').config();
+// Other IMPORTS
+const inputCheck = require('./utils/inputCheck');
 
 // Express Middleware
 app.use(express.urlencoded({ extended: false }));
@@ -26,40 +28,95 @@ const db = mysql.createConnection(
 );
 
 // Database Queries
-// db.query(`SELECT * FROM candidates`, (err, rows) => {
-//     console.log(rows);
-// });
+
+app.get('/api/candidates', (req, res) => {
+    const sql = `SELECT * FROM candidates`;
+
+    db.query(sql, (err, rows) => {
+        if(err) {
+            res.status(500).json({ error: err.message });
+            return;
+        }
+        res.json({
+            message: 'success',
+            data: rows
+        });
+    });
+});
+
 
 // GET a single candidate
-// db.query(`SELECT * FROM candidates WHERE id = 1`, (err, row) => {
-//     if(err) {
-//         console.log(err);
-//     }
+app.get('/api/candidate/:id', (req, res) => {
+    const sql = `SELECT * FROM candidates WHERE id = ?`;
+    const params = [req.params.id];
 
-//     console.log(row);
-// });
+    db.query(sql, params, (err, row) => {
+        if(err) {
+            res.status(400).json({ error: err.message });
+            return;
+        }
+        res.json({
+            message: 'success',
+            data: row
+        });
+    });
+});
+
 
 // Delete a candidate
-// db.query(`DELETE FROM candidates WHERE id = ?`, 1, (err, result) => {
-//     if(err) {
-//         console.log(err);
-//     }
 
-//     console.log(result);
-// });
+app.delete('/api/candidate/:id', (req, res) => {
+    sql = `DELETE FROM candidates WHERE id = ?`;
+    params = [req.params.id];
+
+    db.query(sql, params, (err, result) => {
+        if(err) {
+            res.status(400).json({ error: err.message });
+            return;
+        } else if (!result.affectedRows) {
+            res.json({
+                message: 'Candidate not found'
+            });
+        } else {
+            res.json({
+                message: 'deleted',
+                changes: result.affectedRows,
+                id: req.params.id
+            });
+        }
+    });
+});
+
 
 // Create a candidate
-// const sql = `INSERT INTO candidates (id, first_name, last_name, industry_connected)
-//             VALUES (?,?,?,?)`;
-// const params = [1, 'Ronald', 'Firbank', 1];
+app.post('/api/candidate', ({ body }, res) => {
+    const errors = inputCheck(body, 'first_name', 'last_name', 'industry_connected');
+    if (errors) {
+        res.status(400).json({ error: errors });
+        return;
+    }
 
-// db.query(sql, params, (err, result) => {
-//     if (err) {
-//         console.log(err);
-//     }
+    const sql = `INSERT INTO candidates (first_name, last_name, industry_connected)
+                 VALUES (?,?,?)`;
 
-//     console.log(result);
-// });
+    const params = [body.first_name, body.last_name, body.industry_connected];
+
+    db.query(sql, params, (err, result) => {
+        if (err) {
+            res.status(400).json({ error: err.message });
+            return;
+        }
+        res.json({
+            message: 'success',
+            data: body
+        });
+    });
+});
+
+
+
+
+
 
 // Express ROUTES
 
